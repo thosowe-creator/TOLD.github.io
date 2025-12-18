@@ -29,7 +29,50 @@
             --res-bg: rgba(30, 41, 59, 0.5);
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: background 0.3s ease, color 0.3s ease; }
+        body { font-family: 'Inter', sans-serif; background-color: #e5e7eb; color: var(--text-main); transition: background 0.3s ease, color 0.3s ease; margin: 0; overflow-x: hidden; }
+        .dark-mode { background-color: #020617; }
+        
+        /* Mobile Simulator Styles */
+        #app_wrapper { background-color: var(--bg-main); min-height: 100vh; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .mobile-mode #app_wrapper {
+            width: 375px;
+            height: 812px;
+            margin: 40px auto;
+            border-radius: 40px;
+            border: 12px solid #1f2937;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+        .mobile-mode #app_wrapper::-webkit-scrollbar { width: 4px; }
+        .mobile-mode #app_wrapper::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+
+        /* Notch simulation */
+        #notch { display: none; }
+        .mobile-mode #notch {
+            display: block;
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background: var(--bg-main);
+            z-index: 1000;
+        }
+        #notch::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background: #1f2937;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
+        }
+
         .mono { font-family: 'JetBrains Mono', monospace; }
         .card { background: var(--bg-card); border-radius: 12px; box-shadow: var(--card-shadow); padding: 24px; transition: background 0.3s ease, border-color 0.3s ease; }
         .input-field { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.95rem; background-color: var(--input-bg); color: var(--text-main); outline: none; transition: border-color 0.2s; }
@@ -65,279 +108,305 @@
         #route_finder_modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.6); display: none; align-items: center; 
-            justify-content: center; z-index: 100; backdrop-filter: blur(4px);
+            justify-content: center; z-index: 2000; backdrop-filter: blur(4px);
         }
+
+        /* View Toggle Switch */
+        .view-switch {
+            position: fixed; bottom: 20px; right: 20px; z-index: 5000;
+            background: white; padding: 6px; border-radius: 99px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex; gap: 4px; border: 1px solid #e5e7eb;
+        }
+        .dark-mode .view-switch { background: #1e293b; border-color: #334155; }
+        .view-switch-btn {
+            padding: 8px 16px; border-radius: 99px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; transition: all 0.3s;
+        }
+        .view-switch-btn.active { background: #2563eb; color: white; }
+        .view-switch-btn:not(.active) { color: #64748b; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-0">
 
-<div class="max-w-7xl mx-auto">
-    <header class="flex flex-col lg:flex-row justify-between items-center mb-10 gap-4">
-        <div class="flex flex-col">
-            <h1 class="told-title text-3xl md:text-5xl">
-                <span class="text-amber-900">CHOCO</span> <span class="dark:text-white">AVIATION</span>
-            </h1>
-        </div>
-        
-        <div class="flex wrap items-center justify-center lg:justify-end gap-3 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full lg:w-auto">
-            <div class="flex border-r border-gray-100 dark:border-gray-700 pr-2">
-                <button id="tab_airbus" class="tab-btn active" onclick="setManufacturer('Airbus')">Airbus</button>
-                <button id="tab_boeing" class="tab-btn" onclick="setManufacturer('Boeing')">Boeing</button>
-            </div>
-            <select id="master_ac_type" class="bg-transparent font-bold text-gray-800 dark:text-gray-100 outline-none text-base md:text-lg cursor-pointer px-1 py-1" onchange="syncAircraft(this.value)"></select>
-            <div id="engine_selector_container" class="hidden flex items-center px-2 border-l border-gray-200 dark:border-gray-700">
-                <span class="text-[9px] font-extrabold text-gray-400 mr-2 bg-gray-100 dark:bg-gray-700 px-1 rounded uppercase">Eng Spec</span>
-                <select id="master_engine_type" class="bg-transparent font-bold text-blue-600 outline-none text-xs md:text-sm cursor-pointer" onchange="calculateAll()"></select>
-            </div>
-            <div class="flex gap-1 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <button id="unit_tons" class="px-2 py-1 rounded-md text-[10px] font-bold shadow-sm bg-blue-600 text-white" onclick="setMasterUnit('tons')">METRIC</button>
-                <button id="unit_lbs" class="px-2 py-1 rounded-md text-[10px] font-bold text-gray-500" onclick="setMasterUnit('lbs')">IMPERIAL</button>
+<!-- View Toggle (Floating) -->
+<div class="view-switch">
+    <button id="view_desktop" class="view-switch-btn active" onclick="setViewState(false)">Desktop</button>
+    <button id="view_mobile" class="view-switch-btn" onclick="setViewState(true)">Mobile</button>
+</div>
+
+<!-- Main Wrapper for Simulator -->
+<div id="app_wrapper" class="p-4 md:p-8">
+    <!-- Notch for mobile mode -->
+    <div id="notch"></div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col lg:flex-row justify-between items-center mb-10 gap-4">
+            <div class="flex flex-col">
+                <h1 class="told-title text-3xl md:text-5xl">
+                    <span class="text-amber-900">CHOCO</span> <span class="dark:text-white">AVIATION</span>
+                </h1>
             </div>
             
-            <div class="flex gap-4 border-l border-gray-200 dark:border-gray-700 pl-4">
-                <div class="knob-container">
-                    <div id="route_knob" class="knob blue" onclick="toggleRouteFinder()"></div>
-                    <span class="text-[8px] font-black text-blue-500 uppercase">Route Finder</span>
+            <div class="flex wrap items-center justify-center lg:justify-end gap-3 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 w-full lg:w-auto">
+                <div class="flex border-r border-gray-100 dark:border-gray-700 pr-2">
+                    <button id="tab_airbus" class="tab-btn active" onclick="setManufacturer('Airbus')">Airbus</button>
+                    <button id="tab_boeing" class="tab-btn" onclick="setManufacturer('Boeing')">Boeing</button>
                 </div>
-                <div class="knob-container">
-                    <div id="dome_knob" class="knob" onclick="toggleDarkMode()"></div>
-                    <span class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">Dome Light</span>
+                <select id="master_ac_type" class="bg-transparent font-bold text-gray-800 dark:text-gray-100 outline-none text-base md:text-lg cursor-pointer px-1 py-1" onchange="syncAircraft(this.value)"></select>
+                <div id="engine_selector_container" class="hidden flex items-center px-2 border-l border-gray-200 dark:border-gray-700">
+                    <span class="text-[9px] font-extrabold text-gray-400 mr-2 bg-gray-100 dark:bg-gray-700 px-1 rounded uppercase">Eng Spec</span>
+                    <select id="master_engine_type" class="bg-transparent font-bold text-blue-600 outline-none text-xs md:text-sm cursor-pointer" onchange="calculateAll()"></select>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Route Finder Modal -->
-    <div id="route_finder_modal">
-        <div class="bg-white dark:bg-gray-800 w-full max-w-lg p-6 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 mx-4">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-2">
-                    <h3 class="text-xl font-black italic uppercase text-blue-600 dark:text-blue-400 leading-none">Route Finder</h3>
-                    <span class="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded italic">BETA</span>
+                <div class="flex gap-1 p-1 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <button id="unit_tons" class="px-2 py-1 rounded-md text-[10px] font-bold shadow-sm bg-blue-600 text-white" onclick="setMasterUnit('tons')">METRIC</button>
+                    <button id="unit_lbs" class="px-2 py-1 rounded-md text-[10px] font-bold text-gray-500" onclick="setMasterUnit('lbs')">IMPERIAL</button>
                 </div>
-                <button onclick="toggleRouteFinder()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">✕</button>
-            </div>
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                    <label class="label-text">Departure (Origin)</label>
-                    <select id="route_origin" class="input-field font-bold">
-                        <option value="RKSI">RKSI (Seoul/Incheon)</option>
-                        <option value="RKSS">RKSS (Seoul/Gimpo)</option>
-                        <option value="KJFK">KJFK (New York JFK)</option>
-                        <option value="EGLL">EGLL (London Heathrow)</option>
-                        <option value="RJAA">RJAA (Tokyo Narita)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="label-text">Service Type</label>
-                    <select id="route_type" class="input-field font-bold">
-                        <option value="ALL">All Destinations</option>
-                        <option value="DOM">Domestic</option>
-                        <option value="INT">International</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="generateRecommendation()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 mb-6">Search Realistic Routes</button>
-            <div id="route_results" class="space-y-3 max-h-80 overflow-y-auto pr-2 hidden"></div>
-            <div id="route_empty" class="text-center py-10 text-gray-400 italic text-sm">Select origin and search for real destinations.</div>
-        </div>
-    </div>
-
-    <!-- ... rest of the grid sections (Takeoff, Landing, Fuel) ... -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Takeoff Section -->
-        <section class="card border-t-8 border-sky-500">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl">🛫</span>
-                    <h2 class="text-xl font-black text-sky-600 dark:text-sky-400 uppercase italic">Takeoff</h2>
-                </div>
-                <span id="to_perf_label" class="text-[10px] font-bold px-2 py-1 bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 rounded-full">NORMAL</span>
-            </div>
-            
-            <div class="env-mini-grid">
-                <div>
-                    <label class="label-text">OAT (°C)</label>
-                    <input type="number" id="to_env_oat" class="input-field text-xs font-bold" value="15" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">ELEV (ft)</label>
-                    <input type="number" id="to_env_elev" class="input-field text-xs font-bold" value="0" step="100" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">QNH (hPa)</label>
-                    <input type="number" id="to_env_qnh" class="input-field text-xs font-bold" value="1013" min="800" max="1100" oninput="calculateAll()">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="col-span-full">
-                    <label class="label-text">Thrust Setting</label>
-                    <div id="thrust_options_group" class="thrust-toggle"></div>
-                </div>
-                <div>
-                    <label class="label-text">Runway Cond</label>
-                    <select id="to_rwy_cond" class="input-field font-bold text-blue-700 dark:text-blue-400" onchange="calculateAll()">
-                        <option value="dry">DRY</option>
-                        <option value="wet">WET</option>
-                        <option value="contaminated">ICE/SNOW</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="label-text">Slope (%)</label>
-                    <input type="number" id="to_slope" class="input-field font-bold" value="0" step="0.1" min="-2" max="2" oninput="validateRange(this, -2, 2); calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">Weight (<span class="unit-text">Tons</span>)</label>
-                    <input type="number" id="to_weight" class="input-field" step="0.1" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">CG (% MAC)</label>
-                    <input type="number" id="to_cg" class="input-field" value="25.0" step="0.1" max="50" oninput="validateRange(this, 0, 50); calculateAll()">
-                </div>
-                <div class="col-span-full">
-                    <label class="label-text">RWY HDG / WIND / SPEED</label>
-                    <div class="wind-group">
-                        <input type="number" id="to_rwy_hdg" class="input-field wind-input w-1/3" placeholder="HDG" value="320" min="0" max="360" oninput="calculateAll()">
-                        <input type="number" id="to_wdir" class="input-field wind-input w-1/3" placeholder="WIND" value="320" min="0" max="360" oninput="calculateAll()">
-                        <input type="number" id="to_wspd" class="input-field wind-input w-1/3" placeholder="KT" value="10" min="0" max="99" oninput="calculateAll()">
+                
+                <div class="flex gap-4 border-l border-gray-200 dark:border-gray-700 pl-4">
+                    <div class="knob-container">
+                        <div id="route_knob" class="knob blue" onclick="toggleRouteFinder()"></div>
+                        <span class="text-[8px] font-black text-blue-500 uppercase">Route Finder</span>
+                    </div>
+                    <div class="knob-container">
+                        <div id="dome_knob" class="knob" onclick="toggleDarkMode()"></div>
+                        <span class="text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">Dome Light</span>
                     </div>
                 </div>
-                <div>
-                    <label class="label-text">Flaps</label>
-                    <select id="to_flaps" class="input-field" onchange="calculateAll()"></select>
-                </div>
-                <div>
-                    <label class="label-text">TORA (m)</label>
-                    <input type="number" id="to_tora" class="input-field font-bold" value="3000" min="500" oninput="calculateAll()">
-                </div>
             </div>
-            
-            <div id="to_results" class="mt-8 p-6 bg-sky-50/50 dark:bg-slate-800/50 rounded-xl border border-sky-100 dark:border-sky-900">
-                <div class="flex justify-around mb-6 text-center">
-                    <div><p class="label-text">V1</p><p id="res_v1" class="v-val">--</p></div>
-                    <div><p class="label-text">VR</p><p id="res_vr" class="v-val">--</p></div>
-                    <div><p class="label-text">V2</p><p id="res_v2" class="v-val">--</p></div>
-                </div>
-                <div class="space-y-3 text-xs">
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">REQ TO DIST</span><span id="res_dist" class="font-bold text-sky-700 dark:text-sky-400">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium" id="flex_label">THRUST</span><span id="res_flex" class="font-bold text-sky-700 dark:text-sky-400">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">STAB TRIM</span><span id="res_trim" class="font-bold text-gray-800 dark:text-gray-100">--</span></div>
-                </div>
-                <div class="mt-4">
-                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1"><span>0m</span><span>RUNWAY UTILIZATION</span><span id="to_dist_pct">0%</span></div>
-                    <div class="bar-container"><div id="to_bar" class="bar-fill bg-sky-500"></div></div>
-                </div>
-            </div>
-            <p id="to_warn" class="hidden mt-3 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] rounded border border-red-200 dark:border-red-800 font-bold"></p>
-        </section>
+        </header>
 
-        <!-- Landing Section -->
-        <section class="card border-t-8 border-amber-800">
-            <div class="flex items-center gap-2 mb-4">
-                <span class="text-2xl">🛬</span>
-                <h2 class="text-xl font-black text-amber-800 dark:text-amber-600 uppercase italic">Landing</h2>
-            </div>
-            <div class="env-mini-grid">
-                <div>
-                    <label class="label-text">OAT (°C)</label>
-                    <input type="number" id="ld_env_oat" class="input-field text-xs font-bold" value="15" oninput="calculateAll()">
+        <!-- Route Finder Modal -->
+        <div id="route_finder_modal">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-lg p-6 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 mx-4">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-black italic uppercase text-blue-600 dark:text-blue-400 leading-none">Route Finder</h3>
+                        <span class="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded italic">BETA</span>
+                    </div>
+                    <button onclick="toggleRouteFinder()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl">✕</button>
                 </div>
-                <div>
-                    <label class="label-text">ELEV (ft)</label>
-                    <input type="number" id="ld_env_elev" class="input-field text-xs font-bold" value="0" step="100" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">QNH (hPa)</label>
-                    <input type="number" id="ld_env_qnh" class="input-field text-xs font-bold" value="1013" min="800" max="1100" oninput="calculateAll()">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="label-text">Weight (<span class="unit-text">Tons</span>)</label>
-                    <input type="number" id="ld_weight" class="input-field" step="0.1" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">Slope (%)</label>
-                    <input type="number" id="ld_slope" class="input-field font-bold" value="0" step="0.1" min="-2" max="2" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">LDA (m)</label>
-                    <input type="number" id="ld_lda" class="input-field font-bold" value="3000" min="500" oninput="calculateAll()">
-                </div>
-                <div>
-                    <label class="label-text">Flaps</label>
-                    <select id="ld_flaps" class="input-field" onchange="calculateAll()"></select>
-                </div>
-                <div class="col-span-full">
-                    <label class="label-text">RWY HDG / WIND / SPEED</label>
-                    <div class="wind-group">
-                        <input type="number" id="ld_rwy_hdg" class="input-field wind-input w-1/3" placeholder="HDG" value="140" min="0" max="360" oninput="calculateAll()">
-                        <input type="number" id="ld_wdir" class="input-field wind-input w-1/3" placeholder="WIND" value="140" min="0" max="360" oninput="calculateAll()">
-                        <input type="number" id="ld_wspd" class="input-field wind-input w-1/3" placeholder="KT" value="10" min="0" max="99" oninput="calculateAll()">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="label-text">Departure (Origin)</label>
+                        <select id="route_origin" class="input-field font-bold">
+                            <option value="RKSI">RKSI (Seoul/Incheon)</option>
+                            <option value="RKSS">RKSS (Seoul/Gimpo)</option>
+                            <option value="KJFK">KJFK (New York JFK)</option>
+                            <option value="EGLL">EGLL (London Heathrow)</option>
+                            <option value="RJAA">RJAA (Tokyo Narita)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-text">Service Type</label>
+                        <select id="route_type" class="input-field font-bold">
+                            <option value="ALL">All Destinations</option>
+                            <option value="DOM">Domestic</option>
+                            <option value="INT">International</option>
+                        </select>
                     </div>
                 </div>
-                <div class="col-span-full">
-                    <label class="label-text">Braking Action</label>
-                    <select id="ld_brake" class="input-field" onchange="calculateAll()"></select>
-                </div>
+                <button onclick="generateRecommendation()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-500/30 mb-6">Search Realistic Routes</button>
+                <div id="route_results" class="space-y-3 max-h-80 overflow-y-auto pr-2 hidden"></div>
+                <div id="route_empty" class="text-center py-10 text-gray-400 italic text-sm">Select origin and search for real destinations.</div>
             </div>
-            <div id="ld_results" class="mt-8 p-6 bg-amber-50/50 dark:bg-slate-800/50 rounded-xl border border-amber-100 dark:border-amber-900">
-                <div class="flex justify-around mb-6 text-center">
-                    <div><p class="label-text">VREF</p><p id="res_vref" class="v-val text-amber-900 dark:text-amber-500">--</p></div>
-                    <div><p class="label-text">VAPP</p><p id="res_vapp" class="v-val text-amber-900 dark:text-amber-500">--</p></div>
-                </div>
-                <div class="space-y-3 text-xs">
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">Factored LD</span><span id="res_fld" class="font-bold text-amber-950 dark:text-amber-100">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">Margin</span><span id="res_margin" class="font-bold text-gray-800 dark:text-gray-100">--</span></div>
-                </div>
-                <div class="mt-4"><div class="bar-container"><div id="ld_bar" class="bar-fill bg-amber-700"></div></div></div>
-            </div>
-            <p id="ld_warn" class="hidden mt-3 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] rounded border border-red-200 dark:border-red-800 font-bold"></p>
-        </section>
+        </div>
 
-        <!-- Fuel Plan Section -->
-        <section class="card border-t-8 border-emerald-600">
-            <div class="flex items-center gap-2 mb-6">
-                <span class="text-2xl">⛽</span>
-                <h2 class="text-xl font-black text-emerald-600 dark:text-emerald-400 uppercase italic">Fuel Plan</h2>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="label-text">Distance (NM)</label>
-                    <input type="number" id="fuel_dist" class="input-field" value="500" step="10" min="0" oninput="calculateAll()">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Takeoff Section -->
+            <section class="card border-t-8 border-sky-500">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">🛫</span>
+                        <h2 class="text-xl font-black text-sky-600 dark:text-sky-400 uppercase italic">Takeoff</h2>
+                    </div>
+                    <span id="to_perf_label" class="text-[10px] font-bold px-2 py-1 bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 rounded-full">NORMAL</span>
                 </div>
-                <div>
-                    <label class="label-text">Cruise FL</label>
-                    <input type="number" id="fuel_fl" class="input-field font-bold text-emerald-600 dark:text-emerald-400" value="350" step="10" min="0" max="450" oninput="calculateAll()">
+                
+                <div class="env-mini-grid">
+                    <div>
+                        <label class="label-text">OAT (°C)</label>
+                        <input type="number" id="to_env_oat" class="input-field text-xs font-bold" value="15" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">ELEV (ft)</label>
+                        <input type="number" id="to_env_elev" class="input-field text-xs font-bold" value="0" step="100" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">QNH (hPa)</label>
+                        <input type="number" id="to_env_qnh" class="input-field text-xs font-bold" value="1013" min="800" max="1100" oninput="calculateAll()">
+                    </div>
                 </div>
-                <div>
-                    <label class="label-text">Avg. Winds (kt)</label>
-                    <input type="number" id="fuel_wind" class="input-field" value="0" step="5" oninput="calculateAll()">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-full">
+                        <label class="label-text">Thrust Setting</label>
+                        <div id="thrust_options_group" class="thrust-toggle"></div>
+                    </div>
+                    <div>
+                        <label class="label-text">Runway Cond</label>
+                        <select id="to_rwy_cond" class="input-field font-bold text-blue-700 dark:text-blue-400" onchange="calculateAll()">
+                            <option value="dry">DRY</option>
+                            <option value="wet">WET</option>
+                            <option value="contaminated">ICE/SNOW</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-text">Slope (%)</label>
+                        <input type="number" id="to_slope" class="input-field font-bold" value="0" step="0.1" min="-2" max="2" oninput="validateRange(this, -2, 2); calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Weight (<span class="unit-text">Tons</span>)</label>
+                        <input type="number" id="to_weight" class="input-field" step="0.1" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">CG (% MAC)</label>
+                        <input type="number" id="to_cg" class="input-field" value="25.0" step="0.1" max="50" oninput="validateRange(this, 0, 50); calculateAll()">
+                    </div>
+                    <div class="col-span-full">
+                        <label class="label-text">RWY HDG / WIND / SPEED</label>
+                        <div class="wind-group">
+                            <input type="number" id="to_rwy_hdg" class="input-field wind-input w-1/3" placeholder="HDG" value="320" min="0" max="360" oninput="calculateAll()">
+                            <input type="number" id="to_wdir" class="input-field wind-input w-1/3" placeholder="WIND" value="320" min="0" max="360" oninput="calculateAll()">
+                            <input type="number" id="to_wspd" class="input-field wind-input w-1/3" placeholder="KT" value="10" min="0" max="99" oninput="calculateAll()">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="label-text">Flaps</label>
+                        <select id="to_flaps" class="input-field" onchange="calculateAll()"></select>
+                    </div>
+                    <div>
+                        <label class="label-text">TORA (m)</label>
+                        <input type="number" id="to_tora" class="input-field font-bold" value="3000" min="500" oninput="calculateAll()">
+                    </div>
                 </div>
-                <div>
-                    <label class="label-text">Cost Index</label>
-                    <input type="number" id="fuel_ci" class="input-field" value="20" step="1" min="0" oninput="calculateAll()">
+                
+                <div id="to_results" class="mt-8 p-6 bg-sky-50/50 dark:bg-slate-800/50 rounded-xl border border-sky-100 dark:border-sky-900">
+                    <div class="flex justify-around mb-6 text-center">
+                        <div><p class="label-text">V1</p><p id="res_v1" class="v-val">--</p></div>
+                        <div><p class="label-text">VR</p><p id="res_vr" class="v-val">--</p></div>
+                        <div><p class="label-text">V2</p><p id="res_v2" class="v-val">--</p></div>
+                    </div>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">REQ TO DIST</span><span id="res_dist" class="font-bold text-sky-700 dark:text-sky-400">--</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium" id="flex_label">THRUST</span><span id="res_flex" class="font-bold text-sky-700 dark:text-sky-400">--</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">STAB TRIM</span><span id="res_trim" class="font-bold text-gray-800 dark:text-gray-100">--</span></div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="flex justify-between text-[8px] font-bold text-gray-400 mb-1"><span>0m</span><span>RUNWAY UTILIZATION</span><span id="to_dist_pct">0%</span></div>
+                        <div class="bar-container"><div id="to_bar" class="bar-fill bg-sky-500"></div></div>
+                    </div>
                 </div>
-                <div>
-                    <label class="label-text">Taxi (<span class="unit-text">Tons</span>)</label>
-                    <input type="number" id="fuel_taxi" class="input-field" value="0.2" step="0.1" min="0" oninput="calculateAll()">
+                <p id="to_warn" class="hidden mt-3 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] rounded border border-red-200 dark:border-red-800 font-bold"></p>
+            </section>
+
+            <!-- Landing Section -->
+            <section class="card border-t-8 border-amber-800">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-2xl">🛬</span>
+                    <h2 class="text-xl font-black text-amber-800 dark:text-amber-600 uppercase italic">Landing</h2>
                 </div>
-                <div>
-                    <label class="label-text">Reserve (<span class="unit-text">Tons</span>)</label>
-                    <input type="number" id="fuel_reserve_input" class="input-field" value="3.5" step="0.1" min="0" oninput="calculateAll()">
+                <div class="env-mini-grid">
+                    <div>
+                        <label class="label-text">OAT (°C)</label>
+                        <input type="number" id="ld_env_oat" class="input-field text-xs font-bold" value="15" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">ELEV (ft)</label>
+                        <input type="number" id="ld_env_elev" class="input-field text-xs font-bold" value="0" step="100" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">QNH (hPa)</label>
+                        <input type="number" id="ld_env_qnh" class="input-field text-xs font-bold" value="1013" min="800" max="1100" oninput="calculateAll()">
+                    </div>
                 </div>
-            </div>
-            <div id="fuel_results" class="mt-8 p-6 bg-emerald-50/50 dark:bg-slate-800/50 rounded-xl border border-emerald-100 dark:border-emerald-900">
-                <p class="label-text text-center">Total Block Fuel</p>
-                <p id="res_block" class="text-3xl font-black text-emerald-700 dark:text-emerald-400 text-center mono mb-4">--</p>
-                <div class="space-y-2 text-xs border-t border-emerald-100 dark:border-emerald-900 pt-4">
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">ETE (GS ADJ)</span><span id="res_time" class="font-bold dark:text-gray-100">--:--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">TRIP + CONT (5%)</span><span id="res_trip" class="font-bold dark:text-gray-100">--</span></div>
-                    <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">EFFICIENCY (FL)</span><span id="res_eff" class="font-bold text-emerald-600 dark:text-emerald-400">--</span></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label-text">Weight (<span class="unit-text">Tons</span>)</label>
+                        <input type="number" id="ld_weight" class="input-field" step="0.1" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Slope (%)</label>
+                        <input type="number" id="ld_slope" class="input-field font-bold" value="0" step="0.1" min="-2" max="2" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">LDA (m)</label>
+                        <input type="number" id="ld_lda" class="input-field font-bold" value="3000" min="500" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Flaps</label>
+                        <select id="ld_flaps" class="input-field" onchange="calculateAll()"></select>
+                    </div>
+                    <div class="col-span-full">
+                        <label class="label-text">RWY HDG / WIND / SPEED</label>
+                        <div class="wind-group">
+                            <input type="number" id="ld_rwy_hdg" class="input-field wind-input w-1/3" placeholder="HDG" value="140" min="0" max="360" oninput="calculateAll()">
+                            <input type="number" id="ld_wdir" class="input-field wind-input w-1/3" placeholder="WIND" value="140" min="0" max="360" oninput="calculateAll()">
+                            <input type="number" id="ld_wspd" class="input-field wind-input w-1/3" placeholder="KT" value="10" min="0" max="99" oninput="calculateAll()">
+                        </div>
+                    </div>
+                    <div class="col-span-full">
+                        <label class="label-text">Braking Action</label>
+                        <select id="ld_brake" class="input-field" onchange="calculateAll()"></select>
+                    </div>
                 </div>
-            </div>
-        </section>
+                <div id="ld_results" class="mt-8 p-6 bg-amber-50/50 dark:bg-slate-800/50 rounded-xl border border-amber-100 dark:border-amber-900">
+                    <div class="flex justify-around mb-6 text-center">
+                        <div><p class="label-text">VREF</p><p id="res_vref" class="v-val text-amber-900 dark:text-amber-500">--</p></div>
+                        <div><p class="label-text">VAPP</p><p id="res_vapp" class="v-val text-amber-900 dark:text-amber-500">--</p></div>
+                    </div>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">Factored LD</span><span id="res_fld" class="font-bold text-amber-950 dark:text-amber-100">--</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400 font-medium">Margin</span><span id="res_margin" class="font-bold text-gray-800 dark:text-gray-100">--</span></div>
+                    </div>
+                    <div class="mt-4"><div class="bar-container"><div id="ld_bar" class="bar-fill bg-amber-700"></div></div></div>
+                </div>
+                <p id="ld_warn" class="hidden mt-3 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] rounded border border-red-200 dark:border-red-800 font-bold"></p>
+            </section>
+
+            <!-- Fuel Plan Section -->
+            <section class="card border-t-8 border-emerald-600">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="text-2xl">⛽</span>
+                    <h2 class="text-xl font-black text-emerald-600 dark:text-emerald-400 uppercase italic">Fuel Plan</h2>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="label-text">Distance (NM)</label>
+                        <input type="number" id="fuel_dist" class="input-field" value="500" step="10" min="0" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Cruise FL</label>
+                        <input type="number" id="fuel_fl" class="input-field font-bold text-emerald-600 dark:text-emerald-400" value="350" step="10" min="0" max="450" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Avg. Winds (kt)</label>
+                        <input type="number" id="fuel_wind" class="input-field" value="0" step="5" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Cost Index</label>
+                        <input type="number" id="fuel_ci" class="input-field" value="20" step="1" min="0" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Taxi (<span class="unit-text">Tons</span>)</label>
+                        <input type="number" id="fuel_taxi" class="input-field" value="0.2" step="0.1" min="0" oninput="calculateAll()">
+                    </div>
+                    <div>
+                        <label class="label-text">Reserve (<span class="unit-text">Tons</span>)</label>
+                        <input type="number" id="fuel_reserve_input" class="input-field" value="3.5" step="0.1" min="0" oninput="calculateAll()">
+                    </div>
+                </div>
+                <div id="fuel_results" class="mt-8 p-6 bg-emerald-50/50 dark:bg-slate-800/50 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                    <p class="label-text text-center">Total Block Fuel</p>
+                    <p id="res_block" class="text-3xl font-black text-emerald-700 dark:text-emerald-400 text-center mono mb-4">--</p>
+                    <div class="space-y-2 text-xs border-t border-emerald-100 dark:border-emerald-900 pt-4">
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">ETE (GS ADJ)</span><span id="res_time" class="font-bold dark:text-gray-100">--:--</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">TRIP + CONT (5%)</span><span id="res_trip" class="font-bold dark:text-gray-100">--</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">EFFICIENCY (FL)</span><span id="res_eff" class="font-bold text-emerald-600 dark:text-emerald-400">--</span></div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
 
@@ -428,6 +497,16 @@
     let curMode = 'FLEX';
     let isDarkMode = false;
     let isRouteModalOpen = false;
+    let isMobileView = false;
+
+    // View State Manager
+    function setViewState(isMobile) {
+        isMobileView = isMobile;
+        document.body.classList.toggle('mobile-mode', isMobile);
+        document.getElementById('view_mobile').classList.toggle('active', isMobile);
+        document.getElementById('view_desktop').classList.toggle('active', !isMobile);
+        calculateAll();
+    }
 
     function getAirDensity(oat, elev_ft, qnh) {
         const T_kelvin = oat + 273.15;
@@ -452,44 +531,51 @@
     function calculateTakeoff(ac, eng, rho, oat) {
         const w_raw = parseFloat(document.getElementById('to_weight').value) || 0;
         const mass_kg = (curUnit === 'lbs' ? w_raw / K_LBS : w_raw) * 1000;
+        const mtow_kg = ac.mtow * 1000;
         const tora = parseFloat(document.getElementById('to_tora').value) || 1;
         const slope = parseFloat(document.getElementById('to_slope').value) || 0;
         const flap = ac.toFlaps[document.getElementById('to_flaps').value] || ac.toFlaps[0];
         const rwyCond = document.getElementById('to_rwy_cond').value;
         const { head } = getWindComponents('to_wdir', 'to_wspd', 'to_rwy_hdg');
         const surface = getSurfaceFactors(rwyCond);
-        if (mass_kg < 5000) return;
-        const vs_ias_ms = Math.sqrt((2 * mass_kg * G_ACCEL) / (1.225 * ac.s_area * flap.cl_max));
-        const v2_ias = (vs_ias_ms * 1.15) * MS_TO_KT; 
-        const vr_ias = (vs_ias_ms * 1.10) * MS_TO_KT; 
-        const v1_ias = vr_ias - (rwyCond === 'dry' ? 2 : 6);
-        const tas_conversion = Math.sqrt(1.225 / rho);
-        const v_rotate_tas_ms = (vr_ias * tas_conversion - head) * KT_TO_MS;
-        let net_thrust = eng.thrust_kn * 1000 * 2.0; 
-        const thrust_lapse = (rho / 1.225) * (oat > eng.flat_rating ? (1 - (oat - eng.flat_rating) * 0.01) : 1.0);
-        net_thrust *= thrust_lapse;
-        if (curMode.includes('FLEX') || curMode.includes('TO-2')) net_thrust *= 0.85;
-        else if (curMode.includes('TO-1')) net_thrust *= 0.93;
-        let cur_gs = 0, dist = 0, dt = 0.5;
-        while (cur_gs < v_rotate_tas_ms && dist < 10000) {
-            let drag = 0.5 * rho * Math.pow(cur_gs + head * KT_TO_MS, 2) * ac.s_area * flap.cd0;
-            let lift = 0.5 * rho * Math.pow(cur_gs + head * KT_TO_MS, 2) * ac.s_area * flap.cl_to;
-            let rolling_friction = Math.max(0, (mass_kg * G_ACCEL - lift) * surface.rolling);
-            let accel = (net_thrust - drag - rolling_friction - (mass_kg * G_ACCEL * (slope/100))) / mass_kg;
-            cur_gs += accel * dt;
-            dist += cur_gs * dt;
-        }
-        const final_dist = dist * 1.15; 
-        const dist_pct = Math.round((final_dist / tora) * 100);
-        document.getElementById('res_v1').innerText = Math.round(v1_ias);
-        document.getElementById('res_vr').innerText = Math.round(vr_ias);
-        document.getElementById('res_v2').innerText = Math.round(v2_ias);
-        document.getElementById('res_dist').innerText = Math.round(final_dist) + ' m';
-        document.getElementById('to_dist_pct').innerText = dist_pct + '%';
-        document.getElementById('to_bar').style.width = Math.min(dist_pct, 100) + '%';
+        
         const warn = document.getElementById('to_warn');
-        if (final_dist > tora) { warn.innerText = "⚠️ RUNWAY LIMITED"; warn.classList.remove('hidden'); }
-        else { warn.classList.add('hidden'); }
+        if (mass_kg > 5000) {
+            const vs_ias_ms = Math.sqrt((2 * mass_kg * G_ACCEL) / (1.225 * ac.s_area * flap.cl_max));
+            const v2_ias = (vs_ias_ms * 1.15) * MS_TO_KT; 
+            const vr_ias = (vs_ias_ms * 1.10) * MS_TO_KT; 
+            const v1_ias = vr_ias - (rwyCond === 'dry' ? 2 : 6);
+            const tas_conversion = Math.sqrt(1.225 / rho);
+            const v_rotate_tas_ms = (vr_ias * tas_conversion - head) * KT_TO_MS;
+            let net_thrust = eng.thrust_kn * 1000 * 2.0; 
+            const thrust_lapse = (rho / 1.225) * (oat > eng.flat_rating ? (1 - (oat - eng.flat_rating) * 0.01) : 1.0);
+            net_thrust *= thrust_lapse;
+            if (curMode.includes('FLEX') || curMode.includes('TO-2')) net_thrust *= 0.85;
+            else if (curMode.includes('TO-1')) net_thrust *= 0.93;
+            let cur_gs = 0, dist = 0, dt = 0.5;
+            while (cur_gs < v_rotate_tas_ms && dist < 10000) {
+                let drag = 0.5 * rho * Math.pow(cur_gs + head * KT_TO_MS, 2) * ac.s_area * flap.cd0;
+                let lift = 0.5 * rho * Math.pow(cur_gs + head * KT_TO_MS, 2) * ac.s_area * flap.cl_to;
+                let rolling_friction = Math.max(0, (mass_kg * G_ACCEL - lift) * surface.rolling);
+                let accel = (net_thrust - drag - rolling_friction - (mass_kg * G_ACCEL * (slope/100))) / mass_kg;
+                cur_gs += accel * dt;
+                dist += cur_gs * dt;
+            }
+            const final_dist = dist * 1.15; 
+            const dist_pct = Math.round((final_dist / tora) * 100);
+            document.getElementById('res_v1').innerText = Math.round(v1_ias);
+            document.getElementById('res_vr').innerText = Math.round(vr_ias);
+            document.getElementById('res_v2').innerText = Math.round(v2_ias);
+            document.getElementById('res_dist').innerText = Math.round(final_dist) + ' m';
+            document.getElementById('to_dist_pct').innerText = dist_pct + '%';
+            document.getElementById('to_bar').style.width = Math.min(dist_pct, 100) + '%';
+            
+            if (final_dist > tora) { warn.innerText = "⚠️ RUNWAY LIMITED"; warn.classList.remove('hidden'); }
+            else if (mass_kg > mtow_kg) { warn.innerText = "⚠️ MTOW EXCEEDED"; warn.classList.remove('hidden'); }
+            else { warn.classList.add('hidden'); }
+        } else {
+            warn.classList.add('hidden');
+        }
         document.getElementById('res_flex').innerText = curMfr === 'Airbus' ? (curMode === 'FLEX' ? '+52°C' : 'TOGA') : curMode;
         document.getElementById('res_trim').innerText = computeStabTrim(ac, parseFloat(document.getElementById('to_cg').value));
     }
@@ -497,20 +583,31 @@
     function calculateLanding(ac) {
         const w_raw = parseFloat(document.getElementById('ld_weight').value) || 0;
         const mass_kg = (curUnit === 'lbs' ? w_raw / K_LBS : w_raw) * 1000;
+        const mlw_kg = ac.mlw * 1000;
         const lda = parseFloat(document.getElementById('ld_lda').value) || 1;
         const flap = ac.ldFlaps[document.getElementById('ld_flaps').value] || ac.ldFlaps[0];
         const decel_val = parseFloat(document.getElementById('ld_brake').value) || 2.0;
         const { head } = getWindComponents('ld_wdir', 'ld_wspd', 'ld_rwy_hdg');
-        if (mass_kg < 5000) return;
-        const vs_land_ias = Math.sqrt((2 * mass_kg * G_ACCEL) / (1.225 * ac.s_area * flap.cl_ref));
-        const vref = vs_land_ias * 1.23 * MS_TO_KT;
-        const vapp = vref + Math.max(5, Math.min(15, head * 0.5));
-        const total_ld = (Math.pow(vref * MS_TO_KT * 0.514, 2) / (2 * decel_val) + 500) * flap.d;
-        document.getElementById('res_vref').innerText = Math.round(vref);
-        document.getElementById('res_vapp').innerText = Math.round(vapp);
-        document.getElementById('res_fld').innerText = Math.round(total_ld) + ' m';
-        document.getElementById('res_margin').innerText = Math.round(lda - total_ld) + ' m';
-        document.getElementById('ld_bar').style.width = Math.min((total_ld/lda)*100, 100) + '%';
+        
+        const warn = document.getElementById('ld_warn');
+        if (mass_kg > 5000) {
+            const vs_land_ias = Math.sqrt((2 * mass_kg * G_ACCEL) / (1.225 * ac.s_area * flap.cl_ref));
+            const vref = vs_land_ias * 1.23 * MS_TO_KT;
+            const vapp = vref + Math.max(5, Math.min(15, head * 0.5));
+            const total_ld = (Math.pow(vref * MS_TO_KT * 0.514, 2) / (2 * decel_val) + 500) * flap.d;
+            document.getElementById('res_vref').innerText = Math.round(vref);
+            document.getElementById('res_vapp').innerText = Math.round(vapp);
+            document.getElementById('res_fld').innerText = Math.round(total_ld) + ' m';
+            document.getElementById('res_margin').innerText = Math.round(lda - total_ld) + ' m';
+            document.getElementById('ld_bar').style.width = Math.min((total_ld/lda)*100, 100) + '%';
+            
+            // MLW EXCEEDED Check added here
+            if (total_ld > lda) { warn.innerText = "⚠️ LDA LIMITED"; warn.classList.remove('hidden'); }
+            else if (mass_kg > mlw_kg) { warn.innerText = "⚠️ MLW EXCEEDED"; warn.classList.remove('hidden'); }
+            else { warn.classList.add('hidden'); }
+        } else {
+            warn.classList.add('hidden');
+        }
     }
 
     function calculateFuel(ac) {
