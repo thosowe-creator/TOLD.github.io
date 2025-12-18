@@ -52,11 +52,11 @@
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- TAKEOFF -->
+        <!-- TAKEOFF SECTION -->
         <section class="card border-t-8 border-sky-500">
             <div class="flex items-center gap-2 mb-6">
                 <span class="text-2xl">🛫</span>
-                <h2 class="text-xl font-black text-sky-600 uppercase italic italic">Takeoff</h2>
+                <h2 class="text-xl font-black text-sky-600 uppercase italic">Takeoff</h2>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-full mb-2">
@@ -106,7 +106,7 @@
             <p id="to_warn" class="hidden mt-3 p-2 bg-red-50 text-red-600 text-[10px] rounded border border-red-200 font-bold"></p>
         </section>
 
-        <!-- LANDING -->
+        <!-- LANDING SECTION -->
         <section class="card border-t-8 border-amber-800">
             <div class="flex items-center gap-2 mb-6">
                 <span class="text-2xl">🛬</span>
@@ -155,7 +155,7 @@
             <p id="ld_warn" class="hidden mt-3 p-2 bg-red-50 text-red-600 text-[10px] rounded border border-red-200 font-bold"></p>
         </section>
 
-        <!-- FUEL -->
+        <!-- FUEL PLAN SECTION -->
         <section class="card border-t-8 border-emerald-600">
             <div class="flex items-center gap-2 mb-6">
                 <span class="text-2xl">⛽</span>
@@ -200,7 +200,7 @@
 
 <script>
     /**
-     * PHYSICS & PERFORMANCE DATA MODEL
+     * FLEET PERFORMANCE DATA (Updated with B772ER/B773ER)
      */
     const K_LBS = 2.20462;
     const FLEET = {
@@ -246,6 +246,28 @@
             burn: 2.3, speed: 445, reserve: 3.2, taxi: 0.2, engines: {
                 'CFM56-7B': { mtow: 0, v: 0, bfl: 1.0, flex: 70 }
             }
+        },
+        'B777-200ER': {
+            mtow: 297.5, mlw: 213.1,
+            toFlaps: [ {f:'5', k:1.0, o:0}, {f:'15', k:0.92, o:-4}, {f:'20', k:0.88, o:-7} ],
+            ldFlaps: [ {f:'30', o:0, d:1.0}, {f:'25', o:6, d:1.08} ],
+            ldBrakes: [ {n:'MAX', f:1.0}, {n:'4', f:1.2}, {n:'3', f:1.45}, {n:'2', f:1.8}, {n:'1', f:2.4} ],
+            vRefBase: 138, vScale: 0.35, trim: { b: 5.5, ws: 0.04, cs: 0.12 },
+            burn: 7.2, speed: 490, reserve: 10.0, taxi: 0.7, engines: {
+                'PW4090': { mtow: 0, v: 0, bfl: 1.0, flex: 60 },
+                'GE90-94B': { mtow: 1, v: 1, bfl: 0.98, flex: 62 },
+                'TRENT895': { mtow: 0, v: 0, bfl: 1.0, flex: 60 }
+            }
+        },
+        'B777-300ER': {
+            mtow: 351.5, mlw: 251.2,
+            toFlaps: [ {f:'5', k:1.0, o:0}, {f:'15', k:0.94, o:-3}, {f:'20', k:0.90, o:-6} ],
+            ldFlaps: [ {f:'30', o:0, d:1.0}, {f:'25', o:5, d:1.06} ],
+            ldBrakes: [ {n:'MAX', f:1.0}, {n:'4', f:1.25}, {n:'3', f:1.5}, {n:'2', f:1.9}, {n:'1', f:2.6} ],
+            vRefBase: 142, vScale: 0.32, trim: { b: 6.0, ws: 0.035, cs: 0.11 },
+            burn: 8.5, speed: 495, reserve: 12.0, taxi: 0.9, engines: {
+                'GE90-115B': { mtow: 0, v: 0, bfl: 1.0, flex: 65 }
+            }
         }
     };
 
@@ -254,7 +276,7 @@
     let curMode = 'FLEX';
 
     /**
-     * UI CONTROLLERS
+     * UI LOGIC
      */
     function setManufacturer(mfr) {
         curMfr = mfr;
@@ -296,14 +318,12 @@
         });
         document.getElementById('engine_selector_container').classList.toggle('hidden', Object.keys(ac.engines).length < 2);
 
-        // Unit Conversion for initial values
         const factor = curUnit === 'lbs' ? K_LBS : 1;
-        document.getElementById('to_weight').value = (ac.mtow * 0.9 * factor).toFixed(1);
-        document.getElementById('ld_weight').value = (ac.mlw * 0.9 * factor).toFixed(1);
+        document.getElementById('to_weight').value = (ac.mtow * 0.85 * factor).toFixed(1);
+        document.getElementById('ld_weight').value = (ac.mlw * 0.85 * factor).toFixed(1);
         document.getElementById('fuel_reserve_input').value = (ac.reserve * factor).toFixed(1);
         document.getElementById('fuel_taxi').value = (ac.taxi * factor).toFixed(1);
 
-        // Flaps & Brakes
         const tf = document.getElementById('to_flaps'); tf.innerHTML = '';
         ac.toFlaps.forEach((f, i) => { const o = document.createElement('option'); o.value = i; o.innerText = f.f; tf.appendChild(o); });
         const lf = document.getElementById('ld_flaps'); lf.innerHTML = '';
@@ -329,13 +349,12 @@
     }
 
     /**
-     * CORE CALCULATION ENGINES
+     * CALCULATION ENGINES
      */
     function calculateAll() {
         const acId = document.getElementById('master_ac_type').value;
         const ac = FLEET[acId];
         if(!ac) return;
-
         const engId = document.getElementById('master_engine_type').value;
         const eng = ac.engines[engId] || { mtow:0, v:0, bfl:1.0, flex:70 };
 
@@ -356,7 +375,7 @@
         const warn = document.getElementById('to_warn');
         const resDiv = document.getElementById('to_results');
 
-        if(w > mtow + 0.1 || w < 30) {
+        if(w > mtow + 0.1 || w < 20) {
             warn.innerText = `⚠️ 중량 제한 초과 (MTOW ${mtow}T)`;
             warn.classList.remove('hidden'); resDiv.classList.add('opacity-30'); return;
         }
@@ -369,7 +388,7 @@
         const wind = calcWindComp('to_wdir', 'to_wspd', 'to_rwy_hdg');
         const windFact = wind >= 0 ? 1 - (wind * 0.007) : 1 + (Math.abs(wind) * 0.02);
         const tFact = curMode.includes('1') || curMode === 'FLEX' ? 1.12 : (curMode.includes('2') ? 1.25 : 0.95);
-        const bfl = (mtow > 150 ? 1850 : 1550) * Math.pow(w/(mtow*0.82), 2.1) * eng.bfl * tFact * windFact * flap.k;
+        const bfl = (mtow > 200 ? 2100 : 1550) * Math.pow(w/(mtow*0.8), 2.2) * eng.bfl * tFact * windFact * flap.k;
 
         if(bfl > tora) {
             warn.innerText = `⚠️ 활주로 길이 부족 (${Math.round(bfl)}m 필요)`;
@@ -386,9 +405,10 @@
             let ths = (ac.trim.n - cg) * ac.trim.s;
             ths = Math.min(Math.max(ths, -ac.trim.l), ac.trim.l);
             document.getElementById('res_trim').innerText = (ths >= 0 ? 'UP ' : 'DN ') + Math.abs(ths).toFixed(1);
-            document.getElementById('res_flex').innerText = curMode === 'FLEX' ? `+${Math.min(Math.max(42, 68 - Math.floor(w/8)), eng.flex)}°C` : 'TOGA';
+            document.getElementById('res_flex').innerText = curMode === 'FLEX' ? `+${Math.min(Math.max(42, 68 - Math.floor(w/15)), eng.flex)}°C` : 'TOGA';
             document.getElementById('flex_label').innerText = 'FLEX';
         } else {
+            // Boeing Stab Trim approximation
             let stab = ac.trim.b + ((w/mtow)*ac.trim.ws*10) - ((cg-20)*ac.trim.cs);
             document.getElementById('res_trim').innerText = stab.toFixed(1);
             document.getElementById('res_flex').innerText = curMode;
@@ -407,7 +427,7 @@
         const warn = document.getElementById('ld_warn');
         const resDiv = document.getElementById('ld_results');
 
-        if(w > ac.mlw + 0.1 || w < 30) {
+        if(w > ac.mlw + 0.1 || w < 20) {
             warn.innerText = `⚠️ 착륙 중량 초과 (MLW ${ac.mlw}T)`;
             warn.classList.remove('hidden'); resDiv.classList.add('opacity-30'); return;
         }
@@ -416,8 +436,8 @@
         const wind = calcWindComp('ld_wdir', 'ld_wspd', 'ld_rwy_hdg');
         const vapp = vref + (wind > 0 ? Math.max(5, Math.min(15, wind/2)) : 5);
 
-        const windFact = wind >= 0 ? 1 - (wind * 0.012) : 1 + (Math.abs(wind) * 0.03);
-        const fld = (ac.mtow > 150 ? 1750 : 1250) * Math.pow(w/ac.mlw, 1.8) * brake * 1.67 * windFact * flap.d;
+        const windFact = wind >= 0 ? 1 - (wind * 0.01) : 1 + (Math.abs(wind) * 0.025);
+        const fld = (ac.mtow > 200 ? 1900 : 1250) * Math.pow(w/ac.mlw, 1.8) * brake * 1.67 * windFact * flap.d;
 
         if(fld > lda) {
             warn.innerText = `⚠️ 활주로 초과 위험 (${Math.round(fld)}m 필요)`;
@@ -439,17 +459,13 @@
         const inputReserve = parseFloat(document.getElementById('fuel_reserve_input').value) || 0;
 
         const f = curUnit === 'lbs' ? K_LBS : 1;
-        const invF = 1/f;
-
         const speed = ac.speed + (ci * 0.1);
         const time = dist / speed;
         
-        // Internal calculations always in Metric (Tons)
-        const burnMetric = ac.burn * (1 + (ci/1000)) * time;
-        const taxiMetric = inputTaxi * invF;
-        const reserveMetric = inputReserve * invF;
-        
-        const extraMetric = (burnMetric * 0.05); // Contingency 5%
+        const burnMetric = ac.burn * (1 + (ci/1500)) * time;
+        const taxiMetric = inputTaxi / f;
+        const reserveMetric = inputReserve / f;
+        const extraMetric = (burnMetric * 0.05); 
         const blockMetric = taxiMetric + burnMetric + reserveMetric + extraMetric;
 
         const h = Math.floor(time);
@@ -457,7 +473,6 @@
         
         document.getElementById('res_time').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
         document.getElementById('res_block').innerText = (blockMetric * f).toFixed(1) + (curUnit === 'lbs' ? ' LBS' : ' T');
-        
         document.getElementById('res_taxi_out').innerText = (taxiMetric * f).toFixed(1);
         document.getElementById('res_trip').innerText = (burnMetric * f).toFixed(1);
         document.getElementById('res_res').innerText = (reserveMetric * f).toFixed(1);
